@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { PrsimaModule } from './prisma/prisma.module';
+import { PrismaModule } from './prisma/prisma.module';
 import { BullModule } from '@nestjs/bullmq';
 import { LoggerModule } from 'nestjs-pino';
 import { UserModule } from './user/user.module';
@@ -16,16 +16,20 @@ import { UserModule } from './user/user.module';
 
     LoggerModule.forRoot({
       pinoHttp: {
-        transport: {
-          target: 'pino-pretty',
-          options: {
-            singleLine: true,
-          },
-        },
+        ...(process.env.NODE_ENV === 'production'
+          ? {}
+          : {
+              transport: {
+                target: 'pino-pretty',
+                options: {
+                  singleLine: true,
+                },
+              },
+            }),
       },
     }),
 
-    PrsimaModule,
+    PrismaModule,
 
     BullModule.forRootAsync({
       inject: [ConfigService],
