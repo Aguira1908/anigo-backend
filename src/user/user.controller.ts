@@ -1,34 +1,57 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { ApiResponse } from 'src/common/dto/api-response.dto';
+import { UserEntity } from './entities/user.entity';
 
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post()
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.userService.create(createUserDto);
+  async create(
+    @Body() createUserDto: CreateUserDto,
+  ): Promise<ApiResponse<UserEntity>> {
+    const newUser = await this.userService.create(createUserDto);
+    return new ApiResponse(newUser, 'user created');
   }
 
   @Get()
-  findAll() {
-    return this.userService.findAll();
+  async findAll(): Promise<ApiResponse<UserEntity[]>> {
+    const users = await this.userService.findAll();
+
+    return new ApiResponse(users, 'get all users success');
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.userService.findOne(+id);
+  async findOne(@Param('id') id: string): Promise<ApiResponse<UserEntity>> {
+    const user = await this.userService.findOne(+id);
+
+    return new ApiResponse(user, 'get user success');
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.userService.update(+id, updateUserDto);
+  async update(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+  ): Promise<ApiResponse<UserEntity>> {
+    const updateUser = await this.userService.update(+id, updateUserDto);
+
+    return new ApiResponse(updateUser, 'update user success');
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.userService.remove(+id);
+  async remove(@Param('id') id: string): Promise<ApiResponse<UserEntity>> {
+    const deleteUser = await this.userService.remove(+id);
+    return new ApiResponse(deleteUser, 'delete user success');
   }
 }
