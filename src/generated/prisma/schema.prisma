@@ -1,0 +1,122 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AnimeStatus {
+  ON_GOING
+  COMPLETED
+  UPCOMING
+  PENDING
+}
+
+// Prisma Enum tidak boleh diawali angka (misal '320p' jadi P320)
+enum Resolution {
+  P320
+  P480
+  P720
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique // Tambahan: username biasanya unik
+  role      String   @default("USER")
+  createdAt DateTime @default(now())
+
+  @@map("users") // @@map digunakan agar nama tabel di DB tetap jamak (users)
+}
+
+model Anime {
+  id            Int         @id @default(autoincrement())
+  title         String
+  titleJapan    String? // Pakai ? (opsional) karena mungkin tidak semua anime ada judul jepangnya
+  slug          String      @unique
+  type          String?
+  status        AnimeStatus @default(ON_GOING)
+  studio        String?
+  totalEpisodes Int?
+  releaseDate   DateTime?   @db.Date
+  rating        Float?
+  synopsis      String?     @db.Text
+  url           String?
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relasi
+  genres   Genre[] // Relasi Many-to-Many (1 Anime punya banyak Genre, 1 Genre punya banyak Anime)
+  episodes Episode[]
+
+  @@map("animes")
+}
+
+model Genre {
+  id        Int      @id @default(autoincrement())
+  title     String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relasi Many-to-Many ke Anime
+  animes Anime[]
+
+  @@map("genres")
+}
+
+model Episode {
+  id            Int       @id @default(autoincrement())
+  animeId       Int
+  slug          String    @unique
+  title         String?
+  episodeNumber Int
+  mirrorLink    String?
+  urlEpisode    String?
+  releaseDate   DateTime? @db.Date
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relasi
+  anime   Anime    @relation(fields: [animeId], references: [id], onDelete: Cascade)
+  mirrors Mirror[]
+
+  @@map("episodes")
+}
+
+model Mirror {
+  id         Int        @id @default(autoincrement())
+  episodeId  Int
+  resolution Resolution
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  // Relasi
+  episode Episode        @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  servers StreamServer[]
+
+  @@map("mirrors")
+}
+
+model StreamServer {
+  id          Int      @id @default(autoincrement())
+  mirrorId    Int
+  platform    String   @db.VarChar(100)
+  dataContent String?  @db.Text
+  embedUrl    String?  @db.Text
+  embedHtml   String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relasi
+  mirror Mirror @relation(fields: [mirrorId], references: [id], onDelete: Cascade)
+
+  @@map("stream_servers")
+}
