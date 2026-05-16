@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -7,14 +8,29 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PinoLogger } from 'nestjs-pino';
+import type { Cache } from 'cache-manager';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 @Injectable()
 export class UserService {
   constructor(
     private readonly logger: PinoLogger,
     private readonly prisma: PrismaService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {
     this.logger.setContext(UserService.name);
+  }
+
+  private async clearUserCache(id?: number) {
+    await this.cacheManager.del('/user/');
+
+    if (id) {
+      await this.cacheManager.del(`/user/${id}`);
+    }
+
+    this.logger.info(
+      `Cache invalidation for key: /user ${id ? `& /user/${id}` : ''}`,
+    );
   }
 
   async create(createUserDto: CreateUserDto) {
@@ -38,6 +54,8 @@ export class UserService {
     });
 
     this.logger.info(`succes create user with id: ${newUser.id}`);
+
+    await this.clearUserCache(newUser.id);
     return newUser;
   }
 
@@ -60,15 +78,21 @@ export class UserService {
   async update(id: number, updateUserDto: UpdateUserDto) {
     await this.findOne(id);
 
-    return this.prisma.user.update({
+    const updateUser = await this.prisma.user.update({
       where: { id },
       data: updateUserDto,
     });
+
+    await this.clearUserCache(id);
+    return updateUser;
   }
 
   async remove(id: number) {
     await this.findOne(id);
 
-    return this.prisma.user.delete({ where: { id } });
+    const deleteUser = await this.prisma.user.delete({ where: { id } });
+
+    await this.clearUserCache(id);
+    return deleteUser;
   }
 }

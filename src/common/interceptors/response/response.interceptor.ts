@@ -18,7 +18,12 @@ export class ResponseInterceptor implements NestInterceptor {
       map((res: any) => {
         const statusCode = response.statusCode;
 
-        if (res instanceof ApiResponse) {
+        if (
+          res instanceof ApiResponse ||
+          (res !== null &&
+            typeof res === 'object' &&
+            res._isApiResponse === true)
+        ) {
           return {
             status: 'success',
             statusCode,
@@ -31,7 +36,7 @@ export class ResponseInterceptor implements NestInterceptor {
         return {
           status: 'success',
           statusCode,
-          message: 'Permintaan berhasil diproses',
+          message: 'request success',
           data: res !== undefined ? res : null,
         };
       }),
