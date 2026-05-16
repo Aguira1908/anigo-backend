@@ -1,4 +1,6 @@
 export class ApiResponse<T> {
+  readonly _isApiResponse = true;
+
   data: T;
   message?: string;
   meta?: any;
