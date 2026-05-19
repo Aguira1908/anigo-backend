@@ -21,8 +21,8 @@ export class UserService {
     this.logger.setContext(UserService.name);
   }
 
-  private async clearUserCache(id?: number) {
-    await this.cacheManager.del('/user/');
+  private async clearUserCache(id?: string) {
+    await this.cacheManager.del('/user');
 
     if (id) {
       await this.cacheManager.del(`/user/${id}`);
@@ -55,7 +55,7 @@ export class UserService {
 
     this.logger.info(`succes create user with id: ${newUser.id}`);
 
-    await this.clearUserCache(newUser.id);
+    await this.clearUserCache();
     return newUser;
   }
 
@@ -65,7 +65,7 @@ export class UserService {
     });
   }
 
-  async findOne(id: number) {
+  async findOne(id: string) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
       this.logger.warn(`user with id ${id} not found`);
@@ -75,7 +75,7 @@ export class UserService {
     return user;
   }
 
-  async update(id: number, updateUserDto: UpdateUserDto) {
+  async update(id: string, updateUserDto: UpdateUserDto) {
     await this.findOne(id);
 
     const updateUser = await this.prisma.user.update({
@@ -87,7 +87,7 @@ export class UserService {
     return updateUser;
   }
 
-  async remove(id: number) {
+  async remove(id: string) {
     await this.findOne(id);
 
     const deleteUser = await this.prisma.user.delete({ where: { id } });
