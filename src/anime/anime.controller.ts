@@ -29,8 +29,9 @@ export class AnimeController {
   }
 
   @Get()
-  findAll() {
-    return this.animeService.findAll();
+  async findAll(): Promise<ApiResponse<AnimeEntity[]>> {
+    const anime = await this.animeService.findAll();
+    return new ApiResponse(anime, 'Successfully retrieved all anime');
   }
 
   @Get(':id')
@@ -40,12 +41,17 @@ export class AnimeController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAnimeDto: UpdateAnimeDto) {
-    return this.animeService.update(id, updateAnimeDto);
+  async update(
+    @Param('id') id: string,
+    @Body() updateAnimeDto: UpdateAnimeDto,
+  ): Promise<ApiResponse<AnimeEntity>> {
+    const updateAnime = await this.animeService.update(id, updateAnimeDto);
+    return new ApiResponse(updateAnime, 'Successfully update anime');
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.animeService.remove(id);
+  async remove(@Param('id') id: string): Promise<ApiResponse<AnimeEntity>> {
+    const deleteAnime = await this.animeService.remove(id);
+    return new ApiResponse(deleteAnime, 'Successfully deleted anime');
   }
 }
