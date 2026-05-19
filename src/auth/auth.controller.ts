@@ -24,7 +24,7 @@ export class AuthController {
     authEntity.id = user.id;
     authEntity.username = user.username;
 
-    return new ApiResponse<AuthEntity>(authEntity, 'Registrasi berhasil');
+    return new ApiResponse<AuthEntity>(authEntity, 'Successfully registered');
   }
 
   @Post('login')
@@ -36,7 +36,7 @@ export class AuthController {
 
     this.setCookies(res, tokens.accessToken, tokens.refreshToken);
 
-    return new ApiResponse(null, 'Login berhasil');
+    return new ApiResponse(null, 'Successfully logged in');
   }
 
   @Post('refresh')
@@ -47,14 +47,14 @@ export class AuthController {
     const refreshToken = req.cookies['refreshToken'];
 
     if (!refreshToken) {
-      throw new UnauthorizedException('Refresh token tidak ditemukan');
+      throw new UnauthorizedException('Refresh token not found');
     }
 
     const tokens = await this.authService.refreshTokens(refreshToken);
 
     this.setCookies(res, tokens.accessToken, tokens.refreshToken);
 
-    return new ApiResponse(null, 'Token berhasil diperbarui');
+    return new ApiResponse(null, 'Successfully refreshed tokens');
   }
 
   @Post('logout')
@@ -70,7 +70,7 @@ export class AuthController {
     res.clearCookie('accessToken');
     res.clearCookie('refreshToken');
 
-    return new ApiResponse(null, 'Logout berhasil');
+    return new ApiResponse(null, 'Successfully logged out');
   }
 
   private setCookies(res: Response, accessToken: string, refreshToken: string) {

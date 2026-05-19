@@ -1,12 +1,11 @@
-// src/auth/dto/login.dto.ts
 import { IsNotEmpty, IsString } from 'class-validator';
 
 export class LoginDto {
-  @IsString()
-  @IsNotEmpty({ message: 'Username wajib diisi' })
+  @IsString({ message: 'Username must be a string' })
+  @IsNotEmpty({ message: 'Username is required' })
   username: string;
 
-  @IsString()
-  @IsNotEmpty({ message: 'Password wajib diisi' })
+  @IsString({ message: 'Password must be a string' })
+  @IsNotEmpty({ message: 'Password is required' })
   password: string;
 }

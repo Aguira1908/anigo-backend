@@ -1,15 +1,15 @@
 import { IsString, IsNotEmpty, IsOptional, MinLength } from 'class-validator';
 
 export class CreateUserDto {
-  @IsString()
+  @IsString({ message: 'Username must be a string' })
   @IsNotEmpty({ message: 'Username is required' })
   username: string;
 
-  @IsString()
+  @IsString({ message: 'Role must be a string' })
   @IsOptional()
   role?: string;
 
-  @IsString()
+  @IsString({ message: 'Password must be a string' })
   @IsNotEmpty({ message: 'Password is required' })
   @MinLength(6, { message: 'Password must be at least 6 characters long' })
   password: string;

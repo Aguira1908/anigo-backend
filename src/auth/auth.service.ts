@@ -24,12 +24,13 @@ export class AuthService {
 
   private async clearAuthCache(hashedToken: string) {
     await this.cacheManager.del(`refresh_token:${hashedToken}`);
-    this.logger.info(
-      `Cache invalidation for key: refresh_token:${hashedToken}`,
-    );
+    this.logger.info(`Invalidated cache for key: refresh_token:${hashedToken}`);
   }
 
   async register(registerDto: RegisterDto) {
+    this.logger.info(
+      `Attempting to register a new user: ${registerDto.username}`,
+    );
     const hashedPassword = await argon2.hash(registerDto.password);
 
     return this.userService.create({
@@ -39,18 +40,22 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
+    this.logger.info(`Attempting to login user: ${loginDto.username}`);
     const user = await this.prisma.user.findUnique({
       where: { username: loginDto.username },
     });
 
     if (!user || !(await argon2.verify(user.password, loginDto.password))) {
-      throw new UnauthorizedException('Username atau password salah');
+      this.logger.warn(`Failed login attempt for user: ${loginDto.username}`);
+      throw new UnauthorizedException('Invalid username or password');
     }
 
+    this.logger.info(`Successfully logged in user: ${loginDto.username}`);
     return this.generateTokens(user.id);
   }
 
   async refreshTokens(refreshToken: string) {
+    this.logger.info('Attempting to refresh tokens');
     const hashedToken = crypto
       .createHash('sha256')
       .update(refreshToken)
@@ -61,24 +66,28 @@ export class AuthService {
     );
 
     if (!userId) {
-      throw new UnauthorizedException(
-        'Refresh token tidak valid atau sudah kadaluarsa',
+      this.logger.warn(
+        'Failed token refresh: Invalid or expired refresh token',
       );
+      throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
     // Refresh Token Rotation: Hapus token lama
     await this.clearAuthCache(hashedToken);
 
+    this.logger.info(`Successfully refreshed tokens for user ID: ${userId}`);
     // Terbitkan token baru (Access & Refresh token baru)
     return this.generateTokens(userId);
   }
 
   async revokeToken(refreshToken: string) {
+    this.logger.info('Attempting to revoke token');
     const hashedToken = crypto
       .createHash('sha256')
       .update(refreshToken)
       .digest('hex');
     await this.clearAuthCache(hashedToken);
+    this.logger.info('Successfully revoked token');
   }
 
   private async generateTokens(userId: string) {

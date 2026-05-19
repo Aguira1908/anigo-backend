@@ -11,23 +11,23 @@ import {
 import { AnimeStatus } from '@prisma/client';
 
 export class CreateAnimeDto {
-  @IsString()
+  @IsString({ message: 'Title must be a string' })
   @IsNotEmpty({ message: 'Title is required' })
   title: string;
 
-  @IsString()
+  @IsString({ message: 'TitleJapan must be a string' })
   @IsOptional()
   titleJapan?: string;
 
-  @IsString()
+  @IsString({ message: 'Slug must be a string' })
   @IsNotEmpty({ message: 'Slug is required' })
   slug: string;
 
-  @IsString()
+  @IsString({ message: 'Type must be a string' })
   @IsOptional()
   type?: string;
 
-  @IsString()
+  @IsString({ message: 'CoverImage must be a string' })
   @IsOptional()
   coverImage?: string;
 
@@ -35,7 +35,7 @@ export class CreateAnimeDto {
   @IsOptional()
   status?: AnimeStatus;
 
-  @IsString()
+  @IsString({ message: 'Studio must be a string' })
   @IsOptional()
   studio?: string;
 
@@ -51,11 +51,11 @@ export class CreateAnimeDto {
   @IsOptional()
   rating?: number;
 
-  @IsString()
+  @IsString({ message: 'Synopsis must be a string' })
   @IsOptional()
   synopsis?: string;
 
-  @IsString()
+  @IsString({ message: 'Url must be a string' })
   @IsOptional()
   url?: string;
 
