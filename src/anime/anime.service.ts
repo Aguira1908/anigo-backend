@@ -38,11 +38,11 @@ export class AnimeService {
       `Attempting to create a new anime: ${createAnimeDto.slug}`,
     );
 
-    const exitingAnime = await this.prisma.anime.findUnique({
+    const existingAnime = await this.prisma.anime.findUnique({
       where: { slug: createAnimeDto.slug },
     });
 
-    if (exitingAnime) {
+    if (existingAnime) {
       this.logger.warn(
         `Failed to create anime: Slug '${createAnimeDto.slug}' already exists`,
       );

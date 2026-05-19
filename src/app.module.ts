@@ -13,6 +13,7 @@ import { KeyvCacheableMemory } from 'cacheable';
 import { AuthModule } from './auth/auth.module';
 import { GenreModule } from './genre/genre.module';
 import { AnimeModule } from './anime/anime.module';
+import { EpisodeModule } from './episode/episode.module';
 
 @Module({
   imports: [
@@ -77,6 +78,8 @@ import { AnimeModule } from './anime/anime.module';
     GenreModule,
 
     AnimeModule,
+
+    EpisodeModule,
   ],
   controllers: [AppController],
   providers: [AppService],
