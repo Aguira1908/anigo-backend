@@ -25,21 +25,21 @@ export class UserController {
     @Body() createUserDto: CreateUserDto,
   ): Promise<ApiResponse<UserEntity>> {
     const newUser = await this.userService.create(createUserDto);
-    return new ApiResponse(newUser, 'user created');
+    return new ApiResponse(newUser, 'Successfully created user');
   }
 
   @Get()
   async findAll(): Promise<ApiResponse<UserEntity[]>> {
     const users = await this.userService.findAll();
 
-    return new ApiResponse(users, 'get all users success');
+    return new ApiResponse(users, 'Successfully retrieved all users');
   }
 
   @Get(':id')
   async findOne(@Param('id') id: string): Promise<ApiResponse<UserEntity>> {
     const user = await this.userService.findOne(id);
 
-    return new ApiResponse(user, 'get user success');
+    return new ApiResponse(user, 'Successfully retrieved user details');
   }
 
   @Patch(':id')
@@ -49,12 +49,12 @@ export class UserController {
   ): Promise<ApiResponse<UserEntity>> {
     const updateUser = await this.userService.update(id, updateUserDto);
 
-    return new ApiResponse(updateUser, 'update user success');
+    return new ApiResponse(updateUser, 'Successfully updated user');
   }
 
   @Delete(':id')
   async remove(@Param('id') id: string): Promise<ApiResponse<UserEntity>> {
     const deleteUser = await this.userService.remove(id);
-    return new ApiResponse(deleteUser, 'delete user success');
+    return new ApiResponse(deleteUser, 'Successfully deleted user');
   }
 }
