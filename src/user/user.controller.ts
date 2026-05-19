@@ -37,7 +37,7 @@ export class UserController {
 
   @Get(':id')
   async findOne(@Param('id') id: string): Promise<ApiResponse<UserEntity>> {
-    const user = await this.userService.findOne(+id);
+    const user = await this.userService.findOne(id);
 
     return new ApiResponse(user, 'get user success');
   }
@@ -47,14 +47,14 @@ export class UserController {
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
   ): Promise<ApiResponse<UserEntity>> {
-    const updateUser = await this.userService.update(+id, updateUserDto);
+    const updateUser = await this.userService.update(id, updateUserDto);
 
     return new ApiResponse(updateUser, 'update user success');
   }
 
   @Delete(':id')
   async remove(@Param('id') id: string): Promise<ApiResponse<UserEntity>> {
-    const deleteUser = await this.userService.remove(+id);
+    const deleteUser = await this.userService.remove(id);
     return new ApiResponse(deleteUser, 'delete user success');
   }
 }

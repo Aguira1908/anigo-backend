@@ -10,6 +10,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { Keyv } from 'keyv';
 import KeyvRedis from '@keyv/redis';
 import { KeyvCacheableMemory } from 'cacheable';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -68,6 +69,8 @@ import { KeyvCacheableMemory } from 'cacheable';
     }),
 
     UserModule,
+
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

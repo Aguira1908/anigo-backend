@@ -27,12 +27,13 @@ enum Resolution {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  username  String   @unique // Tambahan: username biasanya unik
-  role      String   @default("USER")
-  createdAt DateTime @default(now())
+  id            String         @id @default(uuid(7)) // UUID v7 bawaan Prisma terbaru
+  username      String         @unique
+  password      String         // Hash bcrypt akan disimpan di sini
+  role          String         @default("USER")
+  createdAt     DateTime       @default(now())
 
-  @@map("users") // @@map digunakan agar nama tabel di DB tetap jamak (users)
+  @@map("users")
 }
 
 model Anime {
@@ -41,6 +42,7 @@ model Anime {
   titleJapan    String?     // Pakai ? (opsional) karena mungkin tidak semua anime ada judul jepangnya
   slug          String      @unique
   type          String?
+  coverImage    String?
   status        AnimeStatus @default(ON_GOING)
   studio        String?
   totalEpisodes Int?
