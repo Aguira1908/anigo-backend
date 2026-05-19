@@ -12,6 +12,7 @@ import KeyvRedis from '@keyv/redis';
 import { KeyvCacheableMemory } from 'cacheable';
 import { AuthModule } from './auth/auth.module';
 import { GenreModule } from './genre/genre.module';
+import { AnimeModule } from './anime/anime.module';
 
 @Module({
   imports: [
@@ -74,6 +75,8 @@ import { GenreModule } from './genre/genre.module';
     AuthModule,
 
     GenreModule,
+
+    AnimeModule,
   ],
   controllers: [AppController],
   providers: [AppService],
