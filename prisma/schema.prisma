@@ -37,7 +37,7 @@ model User {
 }
 
 model Anime {
-  id            Int         @id @default(autoincrement())
+  id            String      @id @default(uuid(7))
   title         String
   titleJapan    String?     // Pakai ? (opsional) karena mungkin tidak semua anime ada judul jepangnya
   slug          String      @unique
@@ -75,8 +75,8 @@ model Genre {
 }
 
 model Episode {
-  id            Int       @id @default(autoincrement())
-  animeId       Int
+  id            String    @id @default(uuid(7))
+  animeId       String
   slug          String    @unique
   title         String?
   episodeNumber Int
@@ -94,8 +94,8 @@ model Episode {
 }
 
 model Mirror {
-  id         Int            @id @default(autoincrement())
-  episodeId  Int
+  id         String         @id @default(uuid(7))
+  episodeId  String
   resolution Resolution
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
@@ -108,8 +108,8 @@ model Mirror {
 }
 
 model StreamServer {
-  id          Int      @id @default(autoincrement())
-  mirrorId    Int
+  id          String   @id @default(uuid(7))
+  mirrorId    String
   platform    String   @db.VarChar(100)
   dataContent String?  @db.Text
   embedUrl    String?  @db.Text
