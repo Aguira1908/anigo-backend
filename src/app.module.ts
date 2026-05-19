@@ -14,6 +14,8 @@ import { AuthModule } from './auth/auth.module';
 import { GenreModule } from './genre/genre.module';
 import { AnimeModule } from './anime/anime.module';
 import { EpisodeModule } from './episode/episode.module';
+import { MirrorModule } from './mirror/mirror.module';
+import { StreamserverModule } from './streamserver/streamserver.module';
 
 @Module({
   imports: [
@@ -80,6 +82,10 @@ import { EpisodeModule } from './episode/episode.module';
     AnimeModule,
 
     EpisodeModule,
+
+    MirrorModule,
+
+    StreamserverModule,
   ],
   controllers: [AppController],
   providers: [AppService],
