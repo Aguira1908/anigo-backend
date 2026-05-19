@@ -71,7 +71,10 @@ export class EpisodeService {
 
   async findOne(id: string) {
     this.logger.info(`Fetching episode with ID: ${id}`);
-    const episode = await this.prisma.episode.findUnique({ where: { id } });
+    const episode = await this.prisma.episode.findUnique({
+      where: { id },
+      include: { mirrors: true },
+    });
 
     if (!episode) {
       this.logger.warn(`Episode with ID ${id} not found`);
