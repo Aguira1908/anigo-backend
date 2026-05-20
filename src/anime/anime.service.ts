@@ -38,19 +38,6 @@ export class AnimeService {
       `Attempting to create a new anime: ${createAnimeDto.slug}`,
     );
 
-    const existingAnime = await this.prisma.anime.findUnique({
-      where: { slug: createAnimeDto.slug },
-    });
-
-    if (existingAnime) {
-      this.logger.warn(
-        `Failed to create anime: Slug '${createAnimeDto.slug}' already exists`,
-      );
-      throw new ConflictException(
-        `Anime slug '${createAnimeDto.slug}' is already taken`,
-      );
-    }
-
     const { genreIds, ...animeData } = createAnimeDto;
 
     const newAnime = await this.prisma.anime.create({
@@ -94,8 +81,6 @@ export class AnimeService {
   async update(id: string, updateAnimeDto: UpdateAnimeDto) {
     this.logger.info(`Attempting to update anime with ID: ${id}`);
 
-    await this.findOne(id);
-
     const { genreIds, ...animeData } = updateAnimeDto;
 
     const updateAnime = await this.prisma.anime.update({
@@ -122,8 +107,6 @@ export class AnimeService {
 
   async remove(id: string) {
     this.logger.info(`Attempting to delete anime with ID: ${id}`);
-    await this.findOne(id);
-
     const deletedAnime = await this.prisma.anime.delete({ where: { id } });
 
     this.logger.info(`Successfully deleted anime with ID: ${id}`);

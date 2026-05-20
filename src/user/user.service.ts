@@ -28,20 +28,15 @@ export class UserService {
       await this.cacheManager.del(`/user/${id}`);
     }
 
-    this.logger.info(`Invalidated cache for key: /user ${id ? `and /user/${id}` : ''}`);
+    this.logger.info(
+      `Invalidated cache for key: /user ${id ? `and /user/${id}` : ''}`,
+    );
   }
 
   async create(createUserDto: CreateUserDto) {
-    this.logger.info(`Attempting to create a new user: ${createUserDto.username}`);
-
-    const existingUser = await this.prisma.user.findUnique({
-      where: { username: createUserDto.username },
-    });
-
-    if (existingUser) {
-      this.logger.warn(`Failed to create user: Username '${createUserDto.username}' already exists`);
-      throw new ConflictException(`Username '${createUserDto.username}' is already taken`);
-    }
+    this.logger.info(
+      `Attempting to create a new user: ${createUserDto.username}`,
+    );
 
     const newUser = await this.prisma.user.create({
       data: createUserDto,
@@ -73,8 +68,6 @@ export class UserService {
 
   async update(id: string, updateUserDto: UpdateUserDto) {
     this.logger.info(`Attempting to update user with ID: ${id}`);
-    await this.findOne(id);
-
     const updatedUser = await this.prisma.user.update({
       where: { id },
       data: updateUserDto,
@@ -87,8 +80,6 @@ export class UserService {
 
   async remove(id: string) {
     this.logger.info(`Attempting to delete user with ID: ${id}`);
-    await this.findOne(id);
-
     const deletedUser = await this.prisma.user.delete({ where: { id } });
 
     this.logger.info(`Successfully deleted user with ID: ${id}`);

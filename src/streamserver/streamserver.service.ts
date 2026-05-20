@@ -38,22 +38,6 @@ export class StreamserverService {
       `Attempting to create a new stream server for mirror ID: ${createStreamserverDto.mirrorId}`,
     );
 
-    const existingServer = await this.prisma.streamServer.findFirst({
-      where: {
-        mirrorId: createStreamserverDto.mirrorId,
-        platform: createStreamserverDto.platform,
-      },
-    });
-
-    if (existingServer) {
-      this.logger.warn(
-        `Failed to create stream server: Platform '${createStreamserverDto.platform}' already exists for this mirror`,
-      );
-      throw new ConflictException(
-        `Stream server with platform '${createStreamserverDto.platform}' already exists for this mirror`,
-      );
-    }
-
     const newServer = await this.prisma.streamServer.create({
       data: createStreamserverDto,
     });
@@ -71,22 +55,18 @@ export class StreamserverService {
 
   async findOne(id: string) {
     this.logger.info(`Fetching stream server with ID: ${id}`);
-
     const server = await this.prisma.streamServer.findUnique({
       where: { id },
     });
-
     if (!server) {
-      this.logger.warn(`Stream server with ID ${id} not found`);
-      throw new NotFoundException(`Stream server with ID ${id} not found`);
+      this.logger.warn(`User with ID ${id} not found`);
+      throw new NotFoundException(`User with ID ${id} not found`);
     }
-
     return server;
   }
 
   async update(id: string, updateStreamserverDto: UpdateStreamserverDto) {
     this.logger.info(`Attempting to update stream server with ID: ${id}`);
-    await this.findOne(id);
 
     const updateServer = await this.prisma.streamServer.update({
       where: { id },
@@ -100,7 +80,6 @@ export class StreamserverService {
 
   async remove(id: string) {
     this.logger.info(`Attempting to delete stream server with ID: ${id}`);
-    await this.findOne(id);
 
     const deletedServer = await this.prisma.streamServer.delete({
       where: { id },
