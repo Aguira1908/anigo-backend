@@ -37,19 +37,6 @@ export class GenreService {
       `Attempting to create a new genre: ${createGenreDto.title}`,
     );
 
-    const existingGenre = await this.prisma.genre.findUnique({
-      where: { title: createGenreDto.title },
-    });
-
-    if (existingGenre) {
-      this.logger.warn(
-        `Failed to create genre: Title '${createGenreDto.title}' already exists`,
-      );
-      throw new ConflictException(
-        `Genre title '${createGenreDto.title}' is already taken`,
-      );
-    }
-
     const newGenre = await this.prisma.genre.create({
       data: createGenreDto,
     });
@@ -80,7 +67,6 @@ export class GenreService {
 
   async update(id: number, updateGenreDto: UpdateGenreDto) {
     this.logger.info(`Attempting to update genre with ID: ${id}`);
-    await this.findOne(id);
 
     const updatedGenre = await this.prisma.genre.update({
       where: { id },
@@ -94,7 +80,6 @@ export class GenreService {
 
   async remove(id: number) {
     this.logger.info(`Attempting to delete genre with ID: ${id}`);
-    await this.findOne(id);
 
     const deletedGenre = await this.prisma.genre.delete({ where: { id } });
 

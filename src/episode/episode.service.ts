@@ -38,19 +38,6 @@ export class EpisodeService {
       `Attempting to create a new episode: ${createEpisodeDto.slug}`,
     );
 
-    const existingEpisode = await this.prisma.episode.findUnique({
-      where: { slug: createEpisodeDto.slug },
-    });
-
-    if (existingEpisode) {
-      this.logger.warn(
-        `Failed to create episode: Slug '${createEpisodeDto.slug}' already exists`,
-      );
-      throw new ConflictException(
-        `Episode slug '${createEpisodeDto.slug}' is already taken`,
-      );
-    }
-
     const newEpisode = await this.prisma.episode.create({
       data: createEpisodeDto,
       include: {
@@ -86,7 +73,6 @@ export class EpisodeService {
 
   async update(id: string, updateEpisodeDto: UpdateEpisodeDto) {
     this.logger.info(`Attempting to update episode with ID: ${id}`);
-    await this.findOne(id);
 
     const updateEpisode = await this.prisma.episode.update({
       where: { id },
@@ -101,7 +87,6 @@ export class EpisodeService {
 
   async remove(id: string) {
     this.logger.info(`Attempting to delete episode with ID: ${id}`);
-    await this.findOne(id);
 
     const deletedEpisode = await this.prisma.episode.delete({ where: { id } });
     this.logger.info(`Successfully deleted episode with ID: ${id}`);

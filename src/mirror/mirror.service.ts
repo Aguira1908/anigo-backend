@@ -10,6 +10,7 @@ import { PinoLogger } from 'nestjs-pino';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class MirrorService {
@@ -35,22 +36,6 @@ export class MirrorService {
     this.logger.info(
       `Attempting to create a new mirror for episode ID: ${createMirrorDto.episodeId}`,
     );
-
-    const existingMirror = await this.prisma.mirror.findFirst({
-      where: {
-        episodeId: createMirrorDto.episodeId,
-        resolution: createMirrorDto.resolution,
-      },
-    });
-
-    if (existingMirror) {
-      this.logger.warn(
-        `Failed to create mirror: Resolution '${createMirrorDto.resolution}' already exists for this episode`,
-      );
-      throw new ConflictException(
-        `Mirror with resolution '${createMirrorDto.resolution}' already exists for this episode`,
-      );
-    }
 
     const newMirror = await this.prisma.mirror.create({
       data: createMirrorDto,
@@ -88,7 +73,6 @@ export class MirrorService {
 
   async update(id: string, updateMirrorDto: UpdateMirrorDto) {
     this.logger.info(`Attempting to update mirror with ID: ${id}`);
-    await this.findOne(id);
 
     const updateMirror = await this.prisma.mirror.update({
       where: { id },
@@ -102,7 +86,6 @@ export class MirrorService {
 
   async remove(id: string) {
     this.logger.info(`Attempting to delete mirror with ID: ${id}`);
-    await this.findOne(id);
 
     const deletedMirror = await this.prisma.mirror.delete({ where: { id } });
     this.logger.info(`Successfully deleted mirror with ID: ${id}`);

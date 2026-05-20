@@ -104,6 +104,7 @@ model Mirror {
   episode    Episode        @relation(fields: [episodeId], references: [id], onDelete: Cascade)
   servers    StreamServer[]
 
+  @@unique([episodeId, resolution])
   @@map("mirrors")
 }
 
@@ -120,5 +121,6 @@ model StreamServer {
   // Relasi
   mirror      Mirror   @relation(fields: [mirrorId], references: [id], onDelete: Cascade)
 
+  @@unique([mirrorId, platform])
   @@map("stream_servers")
 }
