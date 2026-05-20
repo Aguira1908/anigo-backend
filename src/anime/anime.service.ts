@@ -111,6 +111,12 @@ export class AnimeService {
 
     this.logger.info(`Successfully deleted anime with ID: ${id}`);
     await this.clearAnimeCache(id);
+
+    // Cascade delete invalidations
+    await this.cacheManager.del('/episode');
+    await this.cacheManager.del('/mirror');
+    await this.cacheManager.del('/streamserver');
+
     return deletedAnime;
   }
 }

@@ -21,15 +21,21 @@ export class EpisodeService {
     this.logger.setContext(EpisodeService.name);
   }
 
-  private async clearEpisodeCache(id?: string) {
+  private async clearEpisodeCache(id?: string, animeId?: string) {
     await this.cacheManager.del('/episode');
 
     if (id) {
       await this.cacheManager.del(`/episode/${id}`);
     }
 
+    // Invalidate parent Anime cache
+    if (animeId) {
+      await this.cacheManager.del('/anime');
+      await this.cacheManager.del(`/anime/${animeId}`);
+    }
+
     this.logger.info(
-      `Invalidated cache for key: /episode ${id ? `and /episode/${id}` : ''}`,
+      `Invalidated cache for episode ${id || 'all'} and parent anime ${animeId || 'none'}`,
     );
   }
 
@@ -45,7 +51,7 @@ export class EpisodeService {
       },
     });
 
-    await this.clearEpisodeCache();
+    await this.clearEpisodeCache(newEpisode.id, newEpisode.animeId);
     return newEpisode;
   }
 
@@ -81,7 +87,7 @@ export class EpisodeService {
 
     this.logger.info(`Successfully updated episode with ID: ${id}`);
 
-    await this.clearEpisodeCache(id);
+    await this.clearEpisodeCache(updateEpisode.id, updateEpisode.animeId);
     return updateEpisode;
   }
 
@@ -90,7 +96,12 @@ export class EpisodeService {
 
     const deletedEpisode = await this.prisma.episode.delete({ where: { id } });
     this.logger.info(`Successfully deleted episode with ID: ${id}`);
-    await this.clearEpisodeCache(id);
+    await this.clearEpisodeCache(deletedEpisode.id, deletedEpisode.animeId);
+
+    // Cascade delete invalidations
+    await this.cacheManager.del('/mirror');
+    await this.cacheManager.del('/streamserver');
+
     return deletedEpisode;
   }
 }
