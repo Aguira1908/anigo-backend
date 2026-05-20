@@ -75,6 +75,7 @@ export class GenreService {
 
     this.logger.info(`Successfully updated genre with ID: ${id}`);
     await this.clearGenreCache(id);
+    await this.cacheManager.del('/anime');
     return updatedGenre;
   }
 
@@ -85,6 +86,7 @@ export class GenreService {
 
     this.logger.info(`Successfully deleted genre with ID: ${id}`);
     await this.clearGenreCache(id);
+    await this.cacheManager.del('/anime');
     return deletedGenre;
   }
 }

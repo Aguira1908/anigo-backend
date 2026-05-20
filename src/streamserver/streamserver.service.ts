@@ -21,15 +21,21 @@ export class StreamserverService {
     this.logger.setContext(StreamserverService.name);
   }
 
-  private async clearStreamserverCache(id?: string) {
+  private async clearStreamserverCache(id?: string, mirrorId?: string) {
     await this.cacheManager.del('/streamserver');
 
     if (id) {
       await this.cacheManager.del(`/streamserver/${id}`);
     }
 
+    // Invalidate the parent Mirror cache since it includes the StreamServer data
+    if (mirrorId) {
+      await this.cacheManager.del('/mirror');
+      await this.cacheManager.del(`/mirror/${mirrorId}`);
+    }
+
     this.logger.info(
-      `Invalidated cache for key: /streamserver ${id ? `and /streamserver/${id}` : ''}`,
+      `Invalidated cache for streamserver ${id || 'all'} and parent mirror ${mirrorId || 'none'}`,
     );
   }
 
@@ -42,7 +48,7 @@ export class StreamserverService {
       data: createStreamserverDto,
     });
 
-    await this.clearStreamserverCache();
+    await this.clearStreamserverCache(newServer.id, newServer.mirrorId);
     return newServer;
   }
 
@@ -74,7 +80,7 @@ export class StreamserverService {
     });
 
     this.logger.info(`Successfully updated stream server with ID: ${id}`);
-    await this.clearStreamserverCache(id);
+    await this.clearStreamserverCache(updateServer.id, updateServer.mirrorId);
     return updateServer;
   }
 
@@ -86,7 +92,7 @@ export class StreamserverService {
     });
 
     this.logger.info(`Successfully deleted stream server with ID: ${id}`);
-    await this.clearStreamserverCache(id);
+    await this.clearStreamserverCache(deletedServer.id, deletedServer.mirrorId);
     return deletedServer;
   }
 }

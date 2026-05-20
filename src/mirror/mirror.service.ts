@@ -22,14 +22,22 @@ export class MirrorService {
     this.logger.setContext(MirrorService.name);
   }
 
-  private async clearMirrorCache(id?: string) {
+  private async clearMirrorCache(id?: string, episodeId?: string) {
     await this.cacheManager.del('/mirror');
 
     if (id) {
       await this.cacheManager.del(`/mirror/${id}`);
     }
 
-    this.logger.info('logger info');
+    // Invalidate the parent Episode cache since it includes the Mirror data
+    if (episodeId) {
+      await this.cacheManager.del('/episode');
+      await this.cacheManager.del(`/episode/${episodeId}`);
+    }
+
+    this.logger.info(
+      `Invalidated cache for mirror ${id || 'all'} and parent episode ${episodeId || 'none'}`,
+    );
   }
 
   async create(createMirrorDto: CreateMirrorDto) {
@@ -44,7 +52,7 @@ export class MirrorService {
       },
     });
 
-    await this.clearMirrorCache();
+    await this.clearMirrorCache(newMirror.id, newMirror.episodeId);
     return newMirror;
   }
 
@@ -80,7 +88,7 @@ export class MirrorService {
     });
 
     this.logger.info(`Successfully updated mirror with ID: ${id}`);
-    await this.clearMirrorCache(id);
+    await this.clearMirrorCache(updateMirror.id, updateMirror.episodeId);
     return updateMirror;
   }
 
@@ -89,7 +97,11 @@ export class MirrorService {
 
     const deletedMirror = await this.prisma.mirror.delete({ where: { id } });
     this.logger.info(`Successfully deleted mirror with ID: ${id}`);
-    await this.clearMirrorCache(id);
+    await this.clearMirrorCache(deletedMirror.id, deletedMirror.episodeId);
+
+    // Cascade delete invalidations
+    await this.cacheManager.del('/streamserver');
+
     return deletedMirror;
   }
 }
