@@ -8,36 +8,17 @@ import { CreateMirrorDto } from './dto/create-mirror.dto';
 import { UpdateMirrorDto } from './dto/update-mirror.dto';
 import { PinoLogger } from 'nestjs-pino';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import type { Cache } from 'cache-manager';
-import { Prisma } from '@prisma/client';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EntityMutatedEvent } from 'src/common/cache/entity-mutated.event';
 
 @Injectable()
 export class MirrorService {
   constructor(
     private readonly logger: PinoLogger,
     private readonly prisma: PrismaService,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     this.logger.setContext(MirrorService.name);
-  }
-
-  private async clearMirrorCache(id?: string, episodeId?: string) {
-    await this.cacheManager.del('/mirror');
-
-    if (id) {
-      await this.cacheManager.del(`/mirror/${id}`);
-    }
-
-    // Invalidate the parent Episode cache since it includes the Mirror data
-    if (episodeId) {
-      await this.cacheManager.del('/episode');
-      await this.cacheManager.del(`/episode/${episodeId}`);
-    }
-
-    this.logger.info(
-      `Invalidated cache for mirror ${id || 'all'} and parent episode ${episodeId || 'none'}`,
-    );
   }
 
   async create(createMirrorDto: CreateMirrorDto) {
@@ -52,7 +33,12 @@ export class MirrorService {
       },
     });
 
-    await this.clearMirrorCache(newMirror.id, newMirror.episodeId);
+    this.eventEmitter.emit(
+      'entity.mutated',
+      new EntityMutatedEvent('mirror', 'created', newMirror.id, {
+        episodeId: createMirrorDto.episodeId,
+      }),
+    );
     return newMirror;
   }
 
@@ -73,7 +59,7 @@ export class MirrorService {
 
     if (!mirror) {
       this.logger.warn(`Mirror with ID ${id} not found`);
-      throw new ConflictException(`Mirror with ID ${id} not found`);
+      throw new NotFoundException(`Mirror with ID ${id} not found`);
     }
 
     return mirror;
@@ -88,7 +74,12 @@ export class MirrorService {
     });
 
     this.logger.info(`Successfully updated mirror with ID: ${id}`);
-    await this.clearMirrorCache(updateMirror.id, updateMirror.episodeId);
+    this.eventEmitter.emit(
+      'entity.mutated',
+      new EntityMutatedEvent('mirror', 'updated', id, {
+        episodeId: updateMirror.episodeId,
+      }),
+    );
     return updateMirror;
   }
 
@@ -97,11 +88,12 @@ export class MirrorService {
 
     const deletedMirror = await this.prisma.mirror.delete({ where: { id } });
     this.logger.info(`Successfully deleted mirror with ID: ${id}`);
-    await this.clearMirrorCache(deletedMirror.id, deletedMirror.episodeId);
-
-    // Cascade delete invalidations
-    await this.cacheManager.del('/streamserver');
-
+    this.eventEmitter.emit(
+      'entity.mutated',
+      new EntityMutatedEvent('mirror', 'deleted', id, {
+        episodeId: deletedMirror.episodeId,
+      }),
+    );
     return deletedMirror;
   }
 }

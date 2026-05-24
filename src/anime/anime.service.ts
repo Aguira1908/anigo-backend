@@ -8,29 +8,17 @@ import { CreateAnimeDto } from './dto/create-anime.dto';
 import { UpdateAnimeDto } from './dto/update-anime.dto';
 import { PinoLogger } from 'nestjs-pino';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import type { Cache } from 'cache-manager';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EntityMutatedEvent } from 'src/common/cache/entity-mutated.event';
 
 @Injectable()
 export class AnimeService {
   constructor(
     private readonly logger: PinoLogger,
     private readonly prisma: PrismaService,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     this.logger.setContext(AnimeService.name);
-  }
-
-  private async clearAnimeCache(id?: string) {
-    await this.cacheManager.del('/anime');
-
-    if (id) {
-      await this.cacheManager.del(`/anime/${id}`);
-    }
-
-    this.logger.info(
-      `Invalidated cache for key: /anime ${id ? `and /anime/${id}` : ''}`,
-    );
   }
 
   async create(createAnimeDto: CreateAnimeDto) {
@@ -56,7 +44,10 @@ export class AnimeService {
       },
     });
 
-    await this.clearAnimeCache();
+    this.eventEmitter.emit(
+      'entity.mutated',
+      new EntityMutatedEvent('anime', 'created', newAnime.id),
+    );
     return newAnime;
   }
 
@@ -101,7 +92,10 @@ export class AnimeService {
     });
 
     this.logger.info(`Successfully updated anime with ID: ${id}`);
-    await this.clearAnimeCache(id);
+    this.eventEmitter.emit(
+      'entity.mutated',
+      new EntityMutatedEvent('anime', 'updated', id),
+    );
     return updateAnime;
   }
 
@@ -110,13 +104,10 @@ export class AnimeService {
     const deletedAnime = await this.prisma.anime.delete({ where: { id } });
 
     this.logger.info(`Successfully deleted anime with ID: ${id}`);
-    await this.clearAnimeCache(id);
-
-    // Cascade delete invalidations
-    await this.cacheManager.del('/episode');
-    await this.cacheManager.del('/mirror');
-    await this.cacheManager.del('/streamserver');
-
+    this.eventEmitter.emit(
+      'entity.mutated',
+      new EntityMutatedEvent('anime', 'deleted', id),
+    );
     return deletedAnime;
   }
 }
