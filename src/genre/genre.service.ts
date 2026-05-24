@@ -8,28 +8,17 @@ import { CreateGenreDto } from './dto/create-genre.dto';
 import { UpdateGenreDto } from './dto/update-genre.dto';
 import { PinoLogger } from 'nestjs-pino';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import type { Cache } from 'cache-manager';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EntityMutatedEvent } from 'src/common/cache/entity-mutated.event';
 
 @Injectable()
 export class GenreService {
   constructor(
     private readonly logger: PinoLogger,
     private readonly prisma: PrismaService,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     this.logger.setContext(GenreService.name);
-  }
-
-  private async clearGenreCache(id?: number) {
-    await this.cacheManager.del('/genre');
-    if (id) {
-      await this.cacheManager.del(`/genre/${id}`);
-    }
-
-    this.logger.info(
-      `Invalidated cache for key: /genre ${id ? `and /genre/${id}` : ''}`,
-    );
   }
 
   async create(createGenreDto: CreateGenreDto) {
@@ -42,7 +31,10 @@ export class GenreService {
     });
 
     this.logger.info(`Successfully created genre with ID: ${newGenre.id}`);
-    await this.clearGenreCache();
+    this.eventEmitter.emit(
+      'entity.mutated',
+      new EntityMutatedEvent('genre', 'created', newGenre.id),
+    );
     return newGenre;
   }
 
@@ -74,8 +66,10 @@ export class GenreService {
     });
 
     this.logger.info(`Successfully updated genre with ID: ${id}`);
-    await this.clearGenreCache(id);
-    await this.cacheManager.del('/anime');
+    this.eventEmitter.emit(
+      'entity.mutated',
+      new EntityMutatedEvent('genre', 'updated', id),
+    );
     return updatedGenre;
   }
 
@@ -85,8 +79,10 @@ export class GenreService {
     const deletedGenre = await this.prisma.genre.delete({ where: { id } });
 
     this.logger.info(`Successfully deleted genre with ID: ${id}`);
-    await this.clearGenreCache(id);
-    await this.cacheManager.del('/anime');
+    this.eventEmitter.emit(
+      'entity.mutated',
+      new EntityMutatedEvent('genre', 'deleted', id),
+    );
     return deletedGenre;
   }
 }

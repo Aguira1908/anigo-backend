@@ -8,35 +8,17 @@ import { CreateEpisodeDto } from './dto/create-episode.dto';
 import { UpdateEpisodeDto } from './dto/update-episode.dto';
 import { PinoLogger } from 'nestjs-pino';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import type { Cache } from 'cache-manager';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EntityMutatedEvent } from 'src/common/cache/entity-mutated.event';
 
 @Injectable()
 export class EpisodeService {
   constructor(
     private readonly logger: PinoLogger,
     private readonly prisma: PrismaService,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     this.logger.setContext(EpisodeService.name);
-  }
-
-  private async clearEpisodeCache(id?: string, animeId?: string) {
-    await this.cacheManager.del('/episode');
-
-    if (id) {
-      await this.cacheManager.del(`/episode/${id}`);
-    }
-
-    // Invalidate parent Anime cache
-    if (animeId) {
-      await this.cacheManager.del('/anime');
-      await this.cacheManager.del(`/anime/${animeId}`);
-    }
-
-    this.logger.info(
-      `Invalidated cache for episode ${id || 'all'} and parent anime ${animeId || 'none'}`,
-    );
   }
 
   async create(createEpisodeDto: CreateEpisodeDto) {
@@ -51,7 +33,12 @@ export class EpisodeService {
       },
     });
 
-    await this.clearEpisodeCache(newEpisode.id, newEpisode.animeId);
+    this.eventEmitter.emit(
+      'entity.mutated',
+      new EntityMutatedEvent('episode', 'created', newEpisode.id, {
+        animeId: createEpisodeDto.animeId,
+      }),
+    );
     return newEpisode;
   }
 
@@ -86,8 +73,12 @@ export class EpisodeService {
     });
 
     this.logger.info(`Successfully updated episode with ID: ${id}`);
-
-    await this.clearEpisodeCache(updateEpisode.id, updateEpisode.animeId);
+    this.eventEmitter.emit(
+      'entity.mutated',
+      new EntityMutatedEvent('episode', 'updated', id, {
+        animeId: updateEpisode.animeId,
+      }),
+    );
     return updateEpisode;
   }
 
@@ -96,12 +87,12 @@ export class EpisodeService {
 
     const deletedEpisode = await this.prisma.episode.delete({ where: { id } });
     this.logger.info(`Successfully deleted episode with ID: ${id}`);
-    await this.clearEpisodeCache(deletedEpisode.id, deletedEpisode.animeId);
-
-    // Cascade delete invalidations
-    await this.cacheManager.del('/mirror');
-    await this.cacheManager.del('/streamserver');
-
+    this.eventEmitter.emit(
+      'entity.mutated',
+      new EntityMutatedEvent('episode', 'deleted', id, {
+        animeId: deletedEpisode.animeId,
+      }),
+    );
     return deletedEpisode;
   }
 }

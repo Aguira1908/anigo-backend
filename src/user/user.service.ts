@@ -8,29 +8,17 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PinoLogger } from 'nestjs-pino';
-import type { Cache } from 'cache-manager';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EntityMutatedEvent } from 'src/common/cache/entity-mutated.event';
 
 @Injectable()
 export class UserService {
   constructor(
     private readonly logger: PinoLogger,
     private readonly prisma: PrismaService,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     this.logger.setContext(UserService.name);
-  }
-
-  private async clearUserCache(id?: string) {
-    await this.cacheManager.del('/user');
-
-    if (id) {
-      await this.cacheManager.del(`/user/${id}`);
-    }
-
-    this.logger.info(
-      `Invalidated cache for key: /user ${id ? `and /user/${id}` : ''}`,
-    );
   }
 
   async create(createUserDto: CreateUserDto) {
@@ -43,8 +31,10 @@ export class UserService {
     });
 
     this.logger.info(`Successfully created user with ID: ${newUser.id}`);
-
-    await this.clearUserCache();
+    this.eventEmitter.emit(
+      'entity.mutated',
+      new EntityMutatedEvent('user', 'created', newUser.id),
+    );
     return newUser;
   }
 
@@ -74,7 +64,10 @@ export class UserService {
     });
 
     this.logger.info(`Successfully updated user with ID: ${id}`);
-    await this.clearUserCache(id);
+    this.eventEmitter.emit(
+      'entity.mutated',
+      new EntityMutatedEvent('user', 'updated', id),
+    );
     return updatedUser;
   }
 
@@ -83,7 +76,10 @@ export class UserService {
     const deletedUser = await this.prisma.user.delete({ where: { id } });
 
     this.logger.info(`Successfully deleted user with ID: ${id}`);
-    await this.clearUserCache(id);
+    this.eventEmitter.emit(
+      'entity.mutated',
+      new EntityMutatedEvent('user', 'deleted', id),
+    );
     return deletedUser;
   }
 }

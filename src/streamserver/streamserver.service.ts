@@ -8,35 +8,17 @@ import { CreateStreamserverDto } from './dto/create-streamserver.dto';
 import { UpdateStreamserverDto } from './dto/update-streamserver.dto';
 import { PinoLogger } from 'nestjs-pino';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import type { Cache } from 'cache-manager';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EntityMutatedEvent } from 'src/common/cache/entity-mutated.event';
 
 @Injectable()
 export class StreamserverService {
   constructor(
     private readonly logger: PinoLogger,
     private readonly prisma: PrismaService,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     this.logger.setContext(StreamserverService.name);
-  }
-
-  private async clearStreamserverCache(id?: string, mirrorId?: string) {
-    await this.cacheManager.del('/streamserver');
-
-    if (id) {
-      await this.cacheManager.del(`/streamserver/${id}`);
-    }
-
-    // Invalidate the parent Mirror cache since it includes the StreamServer data
-    if (mirrorId) {
-      await this.cacheManager.del('/mirror');
-      await this.cacheManager.del(`/mirror/${mirrorId}`);
-    }
-
-    this.logger.info(
-      `Invalidated cache for streamserver ${id || 'all'} and parent mirror ${mirrorId || 'none'}`,
-    );
   }
 
   async create(createStreamserverDto: CreateStreamserverDto) {
@@ -48,7 +30,12 @@ export class StreamserverService {
       data: createStreamserverDto,
     });
 
-    await this.clearStreamserverCache(newServer.id, newServer.mirrorId);
+    this.eventEmitter.emit(
+      'entity.mutated',
+      new EntityMutatedEvent('streamserver', 'created', newServer.id, {
+        mirrorId: createStreamserverDto.mirrorId,
+      }),
+    );
     return newServer;
   }
 
@@ -65,8 +52,8 @@ export class StreamserverService {
       where: { id },
     });
     if (!server) {
-      this.logger.warn(`User with ID ${id} not found`);
-      throw new NotFoundException(`User with ID ${id} not found`);
+      this.logger.warn(`Stream server with ID ${id} not found`);
+      throw new NotFoundException(`Stream server with ID ${id} not found`);
     }
     return server;
   }
@@ -80,7 +67,12 @@ export class StreamserverService {
     });
 
     this.logger.info(`Successfully updated stream server with ID: ${id}`);
-    await this.clearStreamserverCache(updateServer.id, updateServer.mirrorId);
+    this.eventEmitter.emit(
+      'entity.mutated',
+      new EntityMutatedEvent('streamserver', 'updated', id, {
+        mirrorId: updateServer.mirrorId,
+      }),
+    );
     return updateServer;
   }
 
@@ -92,7 +84,12 @@ export class StreamserverService {
     });
 
     this.logger.info(`Successfully deleted stream server with ID: ${id}`);
-    await this.clearStreamserverCache(deletedServer.id, deletedServer.mirrorId);
+    this.eventEmitter.emit(
+      'entity.mutated',
+      new EntityMutatedEvent('streamserver', 'deleted', id, {
+        mirrorId: deletedServer.mirrorId,
+      }),
+    );
     return deletedServer;
   }
 }

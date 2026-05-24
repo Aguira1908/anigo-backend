@@ -10,12 +10,14 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { Keyv } from 'keyv';
 import KeyvRedis from '@keyv/redis';
 import { KeyvCacheableMemory } from 'cacheable';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AuthModule } from './auth/auth.module';
 import { GenreModule } from './genre/genre.module';
 import { AnimeModule } from './anime/anime.module';
 import { EpisodeModule } from './episode/episode.module';
 import { MirrorModule } from './mirror/mirror.module';
 import { StreamserverModule } from './streamserver/streamserver.module';
+import { CacheInvalidationListener } from './common/cache/cache-invalidation.listener';
 
 @Module({
   imports: [
@@ -40,6 +42,8 @@ import { StreamserverModule } from './streamserver/streamserver.module';
     }),
 
     PrismaModule,
+
+    EventEmitterModule.forRoot(),
 
     BullModule.forRootAsync({
       inject: [ConfigService],
@@ -88,6 +92,6 @@ import { StreamserverModule } from './streamserver/streamserver.module';
     StreamserverModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, CacheInvalidationListener],
 })
 export class AppModule {}
