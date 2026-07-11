@@ -1,98 +1,429 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Anigo Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+REST API backend for an anime streaming platform. Built with NestJS, Prisma ORM, PostgreSQL, and Redis.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## Table of Contents
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- [Overview](#overview)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+- [Prerequisites](#prerequisites)
+- [Getting Started](#getting-started)
+- [Environment Variables](#environment-variables)
+- [Database Schema](#database-schema)
+- [API Reference](#api-reference)
+- [Authentication](#authentication)
+- [Caching Strategy](#caching-strategy)
+- [Project Structure](#project-structure)
+- [Scripts](#scripts)
+- [License](#license)
 
-## Project setup
+---
 
-```bash
-$ npm install
+## Overview
+
+Anigo Backend provides a complete RESTful API for managing anime content, including series metadata, episodes, streaming mirrors, and multi-resolution stream servers. It features JWT-based authentication with HttpOnly cookie sessions, a two-tier caching layer (in-memory + Redis), and event-driven cache invalidation.
+
+---
+
+## Tech Stack
+
+| Category       | Technology                                      |
+| -------------- | ----------------------------------------------- |
+| Runtime        | Node.js                                         |
+| Framework      | NestJS 11                                       |
+| Language       | TypeScript 5                                    |
+| ORM            | Prisma 7 (with `@prisma/adapter-pg`)            |
+| Database       | PostgreSQL 15                                   |
+| Cache / Store  | Redis 7 (via Keyv + cache-manager)              |
+| Queue          | BullMQ (backed by Redis)                        |
+| Auth           | Passport.js + JWT (`HttpOnly` cookies)           |
+| Hashing        | Argon2 (passwords), SHA-256 (refresh tokens)    |
+| Logging        | Pino (via nestjs-pino)                           |
+| Validation     | class-validator + class-transformer             |
+| Containerization | Docker Compose                                |
+
+---
+
+## Architecture
+
+```
+Client Request
+      |
+      v
+  main.ts (Bootstrap)
+      |-- cookie-parser
+      |-- ValidationPipe (whitelist, transform)
+      |-- ResponseInterceptor (standardized JSON envelope)
+      |-- AllExceptionsFilter (Prisma + HTTP error handling)
+      |
+      v
+  AppModule
+      |
+      |-- AuthModule ............ JWT auth, register/login/refresh/logout
+      |-- UserModule ............ User CRUD (protected)
+      |-- AnimeModule ........... Anime CRUD with genre relations
+      |-- GenreModule ........... Genre CRUD (many-to-many with Anime)
+      |-- EpisodeModule ......... Episode CRUD (belongs to Anime)
+      |-- MirrorModule .......... Mirror CRUD (belongs to Episode)
+      |-- StreamserverModule .... Stream server CRUD (belongs to Mirror)
+      |
+      |-- PrismaModule .......... Database access layer
+      |-- CacheModule ........... Two-tier cache (Memory + Redis)
+      |-- BullModule ............ Job queue (Redis-backed)
+      |-- EventEmitterModule .... Event-driven cache invalidation
 ```
 
-## Compile and run the project
+### Standardized API Response
 
-```bash
-# development
-$ npm run start
+All successful responses follow a consistent JSON envelope:
 
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+```json
+{
+  "status": "success",
+  "statusCode": 200,
+  "message": "request success",
+  "data": { }
+}
 ```
 
-## Run tests
+Error responses use a matching structure:
 
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+```json
+{
+  "status": "error",
+  "statusCode": 404,
+  "message": "Anime with ID xxx not found",
+  "path": "/anime/xxx",
+  "timestamp": "2026-05-25T04:00:00.000Z"
+}
 ```
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## Prerequisites
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+- **Node.js** >= 18
+- **Docker** and **Docker Compose** (for PostgreSQL and Redis)
+- **npm** >= 9
+
+---
+
+## Getting Started
+
+### 1. Clone the repository
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+git clone https://github.com/your-username/anigo-backend.git
+cd anigo-backend
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### 2. Install dependencies
 
-## Resources
+```bash
+npm install
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+### 3. Start infrastructure services
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```bash
+docker compose up -d
+```
 
-## Support
+This starts PostgreSQL (port `5432`) and Redis (port `6379`) in the background.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### 4. Configure environment
 
-## Stay in touch
+Copy the example environment file and adjust values as needed:
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```bash
+cp .env.example .env
+```
+
+See [Environment Variables](#environment-variables) for the full reference.
+
+### 5. Run database migrations
+
+```bash
+npx prisma migrate dev
+```
+
+### 6. Start the development server
+
+```bash
+npm run start:dev
+```
+
+The API will be available at `http://localhost:3000`.
+
+---
+
+## Environment Variables
+
+| Variable          | Description                        | Default                  |
+| ----------------- | ---------------------------------- | ------------------------ |
+| `DATABASE_URL`    | PostgreSQL connection string       | *(required)*             |
+| `REDIS_HOST`      | Redis host                         | `localhost`              |
+| `REDIS_PORT`      | Redis port                         | `6379`                   |
+| `REDIS_DB_QUEUE`  | Redis database index for BullMQ    | `0`                      |
+| `REDIS_DB_CACHE`  | Redis database index for caching   | `1`                      |
+| `NODE_ENV`        | Environment (`development` / `production`) | `development`   |
+| `PORT`            | Application port                   | `3000`                   |
+| `JWT_SECRET`      | Secret key for JWT signing         | *(required in production)* |
+| `FRONTEND_URL`    | Allowed CORS origin                | `*` (all origins)        |
+
+---
+
+## Database Schema
+
+The database follows a hierarchical relational model:
+
+```
+User
+
+Anime ──< Episode ──< Mirror ──< StreamServer
+  |
+  >──< Genre  (many-to-many)
+```
+
+### Models
+
+**User**
+| Column     | Type     | Notes                        |
+| ---------- | -------- | ---------------------------- |
+| id         | UUID v7  | Primary key                  |
+| username   | String   | Unique                       |
+| password   | String   | Argon2 hash                  |
+| role       | String   | Default: `USER`              |
+| createdAt  | DateTime | Auto-generated               |
+
+**Anime**
+| Column        | Type        | Notes                      |
+| ------------- | ----------- | -------------------------- |
+| id            | UUID v7     | Primary key                |
+| title         | String      |                            |
+| titleJapan    | String?     | Optional Japanese title    |
+| slug          | String      | Unique, URL-friendly       |
+| type          | String?     |                            |
+| coverImage    | String?     | URL to cover art           |
+| status        | AnimeStatus | `ON_GOING`, `COMPLETED`, `UPCOMING`, `PENDING` |
+| studio        | String?     |                            |
+| totalEpisodes | Int?        |                            |
+| releaseDate   | Date?       |                            |
+| rating        | Float?      |                            |
+| synopsis      | Text?       |                            |
+| url           | String?     | Source URL                 |
+| isActive      | Boolean     | Default: `true`            |
+
+**Genre** — Auto-incremented integer ID, unique `title`, many-to-many with Anime.
+
+**Episode** — UUID v7 ID, belongs to Anime. Contains `episodeNumber`, `slug` (unique), and optional `mirrorLink`.
+
+**Mirror** — UUID v7 ID, belongs to Episode. Unique constraint on `[episodeId, resolution]`. Resolution enum: `P320`, `P480`, `P720`.
+
+**StreamServer** — UUID v7 ID, belongs to Mirror. Unique constraint on `[mirrorId, platform]`. Stores `embedUrl`, `embedHtml`, and `dataContent`.
+
+---
+
+## API Reference
+
+Base URL: `http://localhost:3000`
+
+### Authentication
+
+| Method | Endpoint         | Description                | Auth Required |
+| ------ | ---------------- | -------------------------- | ------------- |
+| POST   | `/auth/register` | Register a new user        | No            |
+| POST   | `/auth/login`    | Login and receive tokens   | No            |
+| POST   | `/auth/refresh`  | Rotate refresh token       | Cookie        |
+| POST   | `/auth/logout`   | Revoke tokens and clear cookies | Cookie   |
+
+### Users
+
+| Method | Endpoint      | Description        | Auth Required |
+| ------ | ------------- | ------------------ | ------------- |
+| GET    | `/user`       | List all users     | Yes (JWT)     |
+| GET    | `/user/:id`   | Get user by ID     | Yes (JWT)     |
+| PATCH  | `/user/:id`   | Update user        | Yes (JWT)     |
+| DELETE | `/user/:id`   | Delete user        | Yes (JWT)     |
+
+### Anime
+
+| Method | Endpoint      | Description         | Auth Required |
+| ------ | ------------- | ------------------- | ------------- |
+| GET    | `/anime`      | List all anime      | No            |
+| GET    | `/anime/:id`  | Get anime by ID     | No            |
+| POST   | `/anime`      | Create anime        | Yes (JWT)     |
+| PATCH  | `/anime/:id`  | Update anime        | Yes (JWT)     |
+| DELETE | `/anime/:id`  | Delete anime        | Yes (JWT)     |
+
+### Genre
+
+| Method | Endpoint      | Description         | Auth Required |
+| ------ | ------------- | ------------------- | ------------- |
+| GET    | `/genre`      | List all genres     | No            |
+| GET    | `/genre/:id`  | Get genre by ID     | No            |
+| POST   | `/genre`      | Create genre        | Yes (JWT)     |
+| PATCH  | `/genre/:id`  | Update genre        | Yes (JWT)     |
+| DELETE | `/genre/:id`  | Delete genre        | Yes (JWT)     |
+
+### Episode
+
+| Method | Endpoint         | Description          | Auth Required |
+| ------ | ---------------- | -------------------- | ------------- |
+| GET    | `/episode`       | List all episodes    | No            |
+| GET    | `/episode/:id`   | Get episode by ID    | No            |
+| POST   | `/episode`       | Create episode       | Yes (JWT)     |
+| PATCH  | `/episode/:id`   | Update episode       | Yes (JWT)     |
+| DELETE | `/episode/:id`   | Delete episode       | Yes (JWT)     |
+
+### Mirror
+
+| Method | Endpoint       | Description        | Auth Required |
+| ------ | -------------- | ------------------ | ------------- |
+| GET    | `/mirror`      | List all mirrors   | No            |
+| GET    | `/mirror/:id`  | Get mirror by ID   | No            |
+| POST   | `/mirror`      | Create mirror      | Yes (JWT)     |
+| PATCH  | `/mirror/:id`  | Update mirror      | Yes (JWT)     |
+| DELETE | `/mirror/:id`  | Delete mirror      | Yes (JWT)     |
+
+### Stream Server
+
+| Method | Endpoint              | Description              | Auth Required |
+| ------ | --------------------- | ------------------------ | ------------- |
+| GET    | `/streamserver`       | List all stream servers  | No            |
+| GET    | `/streamserver/:id`   | Get stream server by ID  | No            |
+| POST   | `/streamserver`       | Create stream server     | Yes (JWT)     |
+| PATCH  | `/streamserver/:id`   | Update stream server     | Yes (JWT)     |
+| DELETE | `/streamserver/:id`   | Delete stream server     | Yes (JWT)     |
+
+---
+
+## Authentication
+
+The application implements a **dual-token strategy**:
+
+1. **Access Token** — Short-lived JWT (15 minutes), signed with `JWT_SECRET`. Sent as an `HttpOnly` cookie.
+2. **Refresh Token** — Long-lived opaque token (7 days), stored as a SHA-256 hash in Redis. Sent as an `HttpOnly` cookie.
+
+### Token Flow
+
+```
+1. Client sends POST /auth/login with credentials
+2. Server validates credentials (Argon2 verify)
+3. Server generates:
+   - JWT access token (15 min TTL)
+   - Opaque refresh token (7 day TTL, stored in Redis as SHA-256 hash)
+4. Both tokens are set as HttpOnly cookies
+5. Client sends requests with cookies automatically attached
+6. When access token expires, client calls POST /auth/refresh
+7. Server rotates refresh token (old token revoked, new token issued)
+8. POST /auth/logout revokes refresh token and clears all cookies
+```
+
+### Security Measures
+
+- **HttpOnly cookies** prevent XSS-based token theft
+- **Argon2** for password hashing (memory-hard, resistant to GPU attacks)
+- **SHA-256** for refresh token storage (high-entropy tokens make dictionary attacks infeasible)
+- **Token rotation** on refresh invalidates the previous refresh token
+- **SameSite** cookie attribute set to `none` in production, `lax` in development
+
+---
+
+## Caching Strategy
+
+The application uses a **two-tier cache** architecture:
+
+| Tier       | Backend              | TTL       | Purpose                     |
+| ---------- | -------------------- | --------- | --------------------------- |
+| L1 (fast)  | In-memory (Cacheable)| 2 minutes | Low-latency reads           |
+| L2 (shared)| Redis (Keyv)         | Default   | Shared across instances     |
+
+Cache and queue operations use **separate Redis databases** to avoid key collisions:
+- DB 0 — BullMQ job queue
+- DB 1 — Cache store
+
+### Event-Driven Invalidation
+
+Cache invalidation is handled centrally through `@nestjs/event-emitter`. When any service mutates data, it emits an `entity.mutated` event. The `CacheInvalidationListener` then invalidates all affected keys, including cascading to parent entities:
+
+| Entity Mutated | Keys Invalidated                                           |
+| -------------- | ---------------------------------------------------------- |
+| streamserver   | `/streamserver`, `/streamserver/:id`, `/mirror`, `/mirror/:mid` |
+| mirror         | `/mirror`, `/mirror/:id`, `/episode`, `/episode/:eid`     |
+| episode        | `/episode`, `/episode/:id`, `/anime`, `/anime/:aid`       |
+| anime          | `/anime`, `/anime/:id`                                     |
+| genre          | `/genre`, `/genre/:id`, `/anime` (many-to-many cascade)   |
+| user           | `/user`, `/user/:id`                                       |
+
+---
+
+## Project Structure
+
+```
+anigo-backend/
+├── prisma/
+│   └── schema.prisma            # Database schema definition
+├── src/
+│   ├── main.ts                  # Application bootstrap
+│   ├── app.module.ts            # Root module (imports all feature modules)
+│   ├── app.controller.ts        # Health check / root controller
+│   ├── app.service.ts           # Root service
+│   │
+│   ├── auth/                    # Authentication module
+│   │   ├── auth.controller.ts   # Login, register, refresh, logout endpoints
+│   │   ├── auth.service.ts      # Token generation, validation, revocation
+│   │   ├── dto/                 # LoginDto, RegisterDto
+│   │   ├── entities/            # AuthEntity response shape
+│   │   ├── guards/              # JwtAuthGuard
+│   │   └── strategies/          # Passport JWT strategy
+│   │
+│   ├── user/                    # User CRUD module
+│   ├── anime/                   # Anime CRUD module
+│   ├── genre/                   # Genre CRUD module
+│   ├── episode/                 # Episode CRUD module
+│   ├── mirror/                  # Mirror CRUD module
+│   ├── streamserver/            # Stream server CRUD module
+│   │
+│   ├── prisma/                  # PrismaService (database client)
+│   │
+│   └── common/
+│       ├── cache/               # CacheInvalidationListener, EntityMutatedEvent
+│       ├── dto/                 # ApiResponse DTO (standardized envelope)
+│       ├── filters/             # AllExceptionsFilter (global error handler)
+│       ├── helper/              # Utility functions
+│       └── interceptors/        # ResponseInterceptor (response formatting)
+│
+├── test/                        # E2E test configuration
+├── docker-compose.yml           # PostgreSQL + Redis containers
+├── package.json
+├── tsconfig.json
+└── .env                         # Environment variables (not committed)
+```
+
+---
+
+## Scripts
+
+| Command                | Description                              |
+| ---------------------- | ---------------------------------------- |
+| `npm run start`        | Start the application                    |
+| `npm run start:dev`    | Start in watch mode (auto-reload)        |
+| `npm run start:debug`  | Start in debug mode with watch           |
+| `npm run start:prod`   | Start production build (`node dist/main`)|
+| `npm run build`        | Compile TypeScript to JavaScript         |
+| `npm run lint`         | Run ESLint with auto-fix                 |
+| `npm run format`       | Format code with Prettier                |
+| `npm run test`         | Run unit tests                           |
+| `npm run test:watch`   | Run tests in watch mode                  |
+| `npm run test:cov`     | Run tests with coverage report           |
+| `npm run test:e2e`     | Run end-to-end tests                     |
+
+---
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+This project is **UNLICENSED** — proprietary and not open source.
