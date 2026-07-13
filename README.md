@@ -406,6 +406,16 @@ anigo-backend/
 
 ---
 
+## Testing
+
+The application uses **Jest** for unit testing, covering controllers, services, interceptors, and exception filters.
+
+- **Controllers:** Tests verify correct mapping, payload validation handling, and standardized API response (`ApiResponse` wrapper) formatting.
+- **Services:** Tests include mocking the Prisma client and checking the business logic implementation and exceptions (e.g. `NotFoundException`).
+- **Global Handlers:** Includes unit tests for `AllExceptionsFilter` and `ResponseInterceptor` to ensure responses conform to the expected format.
+
+---
+
 ## Scripts
 
 | Command                | Description                              |
